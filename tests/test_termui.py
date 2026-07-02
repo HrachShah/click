@@ -106,6 +106,26 @@ def test_progressbar_hidden_manual(runner, monkeypatch):
     assert runner.invoke(cli, []).output == ""
 
 
+def test_progressbar_drains_pending_steps_on_exit(runner, monkeypatch):
+    @click.command()
+    def cli():
+        with click.progressbar(
+            range(20),
+            show_pos=True,
+            update_min_steps=7,
+        ) as progress:
+            for _ in progress:
+                pass
+
+    monkeypatch.setattr(click._termui_impl, "isatty", lambda _: True)
+    result = runner.invoke(cli, [])
+    # update_min_steps=7 does not evenly divide length=20, so without
+    # the drain the final line would be stuck at 14/20. After the fix
+    # the trailing line should show 20/20.
+    lines = [line for line in result.output.split("\n") if "20/20" in line]
+    assert lines, f"Expected 20/20 in output, got: {result.output!r}"
+
+
 @pytest.mark.parametrize("avg, expected", [([], 0.0), ([1, 4], 2.5)])
 def test_progressbar_time_per_iteration(runner, avg, expected):
     with _create_progress(2, avg=avg) as progress:

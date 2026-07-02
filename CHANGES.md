@@ -4,6 +4,9 @@ Unreleased
 
 - Supported versions of Windows enable ANSI terminal styles by default.
   Colorama is no longer a dependency and is not used. {issue}`2986` {pr}`3505`
+- Drain pending steps in `ProgressBar.__exit__` so the final position is
+  rendered when `update_min_steps` does not evenly divide `length`.
+  {issue}`3571`
 - {class}`Argument` accepts a `help` parameter, and help output includes
   a `Positional arguments` section when argument help is available. {issue}`2983` {pr}`3473`
 - Fix test failures when using pytest >= 9.1. {pr}`3656`
