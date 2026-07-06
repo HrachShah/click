@@ -156,6 +156,28 @@ def test_file_atomics(runner):
             assert f.read() == b"Foo bar baz\n"
 
 
+def test_file_atomics_delete_on_exception(runner):
+    # Regression: an exception inside a `with click.open_file(..., atomic=True)`
+    # block should leave the destination file unchanged. The pre-fix code
+    # ignored the `delete=True` argument the context manager passes on
+    # exception, so the partial temp file was renamed over the original
+    # file, overwriting it on error.
+    @click.command()
+    @click.argument("output", type=click.File("wb", atomic=True))
+    def inout(output):
+        output.write(b"Foo bar baz\n")
+        output.flush()
+        raise RuntimeError("boom")
+
+    with runner.isolated_filesystem():
+        with open("foo.txt", "wb") as f:
+            f.write(b"OLD\n")
+        result = runner.invoke(inout, ["foo.txt"])
+        assert isinstance(result.exception, RuntimeError)
+        with open("foo.txt", "rb") as f:
+            assert f.read() == b"OLD\n"
+
+
 def test_stdout_default(runner):
     @click.command()
     @click.argument("output", type=click.File("w"), default="-")

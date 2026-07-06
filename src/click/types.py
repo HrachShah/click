@@ -941,7 +941,11 @@ class File(ParamType[t.IO[t.Any]]):
                 )
 
                 if ctx is not None:
-                    ctx.call_on_close(lf.close_intelligently)
+                    # Use `with_resource` (not `call_on_close`) so the
+                    # `__exit__` of `LazyFile` sees the active exception
+                    # and can drop the in-flight temp file on error
+                    # instead of renaming it over the destination.
+                    ctx.with_resource(lf)
 
                 return t.cast("t.IO[t.Any]", lf)
 

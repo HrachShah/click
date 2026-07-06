@@ -196,7 +196,24 @@ class LazyFile:
         exc_value: BaseException | None,
         tb: TracebackType | None,
     ) -> None:
-        self.close_intelligently()
+        if not self.should_close:
+            return
+        if self._f is None:
+            return
+        close = getattr(self._f, "close", None)
+        if close is None:
+            self.close()
+            return
+        try:
+            close(delete=exc_type is not None)
+        except TypeError:
+            # Wrapped file objects that don't accept ``delete`` (e.g. the
+            # plain ``open`` result for non-atomic writes) fall back to a
+            # plain close. _AtomicFile.close accepts the kwarg, so atomic
+            # writes get the delete-on-error path this branch is meant to
+            # enable.
+            self._f.close()
+        self._f = None
 
     def __iter__(self) -> cabc.Iterator[t.AnyStr]:
         self.open()

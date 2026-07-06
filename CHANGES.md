@@ -2,6 +2,12 @@
 
 Unreleased
 
+- Preserve the destination file when an exception interrupts a
+  `click.open_file(..., atomic=True)` block. The temp file is dropped on
+  error instead of being renamed over the existing file, and the click
+  context teardown now propagates the active exception to
+  {class}`~click.utils.LazyFile` so direct `with` usage gets the same
+  behaviour.
 - Supported versions of Windows enable ANSI terminal styles by default.
   Colorama is no longer a dependency and is not used. {issue}`2986` {pr}`3505`
 - {class}`Argument` accepts a `help` parameter, and help output includes

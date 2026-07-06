@@ -463,7 +463,17 @@ class _AtomicFile:
         if self.closed:
             return
         self._f.close()
-        os.replace(self._tmp_filename, self._real_filename)
+        try:
+            if delete:
+                os.remove(self._tmp_filename)
+            else:
+                os.replace(self._tmp_filename, self._real_filename)
+        except OSError:
+            # If the rename/remove fails the underlying temp file is
+            # leaked, but closing the wrapper should not raise on top of
+            # whatever caused the I/O error (the caller is already in an
+            # error path via __exit__).
+            pass
         self.closed = True
 
     def __getattr__(self, name: str) -> t.Any:
