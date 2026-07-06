@@ -2,14 +2,25 @@
 
 Unreleased
 
+- Preserve the destination file when an exception interrupts a
+  `click.open_file(..., atomic=True)` block. The temp file is dropped on
+  error instead of being renamed over the existing file, and the click
+  context teardown now propagates the active exception to
+  {class}`~click.utils.LazyFile` so direct `with` usage gets the same
+  behaviour.
 - Supported versions of Windows enable ANSI terminal styles by default.
   Colorama is no longer a dependency and is not used. {issue}`2986` {pr}`3505`
 - {class}`Argument` accepts a `help` parameter, and help output includes
   a `Positional arguments` section when argument help is available. {issue}`2983` {pr}`3473`
+- `confirm()` and `prompt()` strip ANSI color and style codes from the
+  prompt when the output stream does not support them, matching `echo()`.
+  This stripping was lost in `8.4.0` when {pr}`2969` began writing the
+  prompt with `input()` directly. {issue}`3572` {pr}`3653`
+- Fix test failures when using pytest >= 9.1. {pr}`3656`
 
 ## Version 8.4.2
 
-Unreleased
+Released 2026-06-24
 
 - Fix Fish shell completion broken in `8.4.0` by {pr}`3126`. Newlines and
   tabs in option help text are now escaped, keeping the original completion
@@ -27,6 +38,14 @@ Unreleased
   stream when no external pager runs, completing the partial
   `I/O operation on closed file` fix from {pr}`3482`. {issue}`3449`
   {pr}`3533`
+- Fix CLI usage symopsis for optional arguments producing double square brackets
+  `[[a|b|c]]...` whose type already brackets their metavar. {pr}`3578`
+- {func}`version_option` resolves a `package_name` that does not match an
+  installed distribution as an import (top-level module) name via
+  {func}`importlib.metadata.packages_distributions`. Packages whose
+  top-level module name differs from their distribution name (`PIL` vs
+  `Pillow`, `jwt` vs `PyJWT`) no longer raise `RuntimeError` out of the
+  box. {issue}`2331` {issue}`1884` {issue}`3125` {pr}`3582`
 
 ## Version 8.4.1
 
