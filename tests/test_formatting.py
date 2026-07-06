@@ -574,6 +574,36 @@ def test_help_formatter_write_usage(
     assert f.getvalue() == expected
 
 
+def test_help_formatter_write_usage_keeps_hyphenated_options_intact():
+    """Regression for #3362: hyphenated options must not be split at the
+    hyphen when the usage line is wrapped. Each ``--option-with-hyphens``
+    is a single token from the caller's perspective, so the line break
+    belongs between tokens, not inside one.
+    """
+    f = click.HelpFormatter(width=65)
+    options = [
+        "--enable-verbose-logging",
+        "--output-file-path",
+        "--max-retry-count",
+        "--disable-cache-mode",
+        "--config-file-location",
+        "--user-auth-token",
+        "--auto-update-interval",
+        "--force-overwrite-existing",
+        "--network-timeout-seconds",
+        "--debug-trace-enabled",
+    ]
+    f.write_usage("program", " ".join(options))
+    rendered = f.getvalue()
+    # No token should be split across a line boundary, i.e. the second
+    # line must not start with the trailing half of a hyphenated option.
+    for line in rendered.splitlines()[1:]:
+        assert not line.lstrip().startswith(("-retry", "-file-", "-location", "-seconds"))
+    # And the full prefix should appear as a complete option on one line.
+    assert "--enable-verbose-logging" in rendered
+    assert "--debug-trace-enabled" in rendered
+
+
 def test_help_formatter_write_usage_without_args_styled_prefix():
     """A downstream-styled prefix is preserved when ``args`` is empty:
     the ANSI escape sequences survive, only the trailing separator is
