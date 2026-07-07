@@ -6,6 +6,11 @@ Unreleased
   Colorama is no longer a dependency and is not used. {issue}`2986` {pr}`3505`
 - {class}`Argument` accepts a `help` parameter, and help output includes
   a `Positional arguments` section when argument help is available. {issue}`2983` {pr}`3473`
+- `ProgressBar.update` forces the final render when the next flush would
+  push the bar past its end. Previously, when `length` was not a multiple
+  of `update_min_steps` (e.g. `length=20, update_min_steps=7`), the bar
+  stopped at the last sub-threshold position instead of the real end
+  (e.g. `14/20` rather than `20/20`). {issue}`3571` {pr}`3571`
 
 ## Version 8.4.2
 
