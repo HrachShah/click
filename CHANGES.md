@@ -27,6 +27,11 @@ Unreleased
   {issue}`2819` {pr}`3678`
 - `unstyle` and the ANSI handling behind help-text wrapping now strip the full
   CSI escape-sequence grammar.
+- Parameter's callable default is no longer invoked under
+  `resilient_parsing=True`, matching the documented contract for
+  `Context.resilient_parsing` ("Default values will also be ignored").
+  This makes shell completion cheap when defaults are expensive to
+  compute. {issue}`2614`
 
 ## Version 8.4.2
 
