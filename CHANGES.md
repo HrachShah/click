@@ -6,6 +6,11 @@ Unreleased
   Colorama is no longer a dependency and is not used. {issue}`2986` {pr}`3505`
 - {class}`Argument` accepts a `help` parameter, and help output includes
   a `Positional arguments` section when argument help is available. {issue}`2983` {pr}`3473`
+- Parameter's callable default is no longer invoked under
+  `resilient_parsing=True`, matching the documented contract for
+  `Context.resilient_parsing` ("Default values will also be ignored").
+  This makes shell completion cheap when defaults are expensive to
+  compute. {issue}`2614`
 
 ## Version 8.4.2
 
