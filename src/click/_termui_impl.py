@@ -342,7 +342,19 @@ class ProgressBar(t.Generic[V]):
 
         self._completed_intervals += n_steps
 
-        if self._completed_intervals >= self.update_min_steps:
+        # If the next flush would push the bar past its end, force a
+        # render at the real final position. Otherwise the last
+        # ``update_min_steps - 1`` steps are silently dropped from the
+        # visible output when ``length`` is not a multiple of
+        # ``update_min_steps`` (e.g. ``length=20`` and
+        # ``update_min_steps=7`` leave the bar showing ``14/20``).
+        will_finish = (
+            self.length is not None
+            and self.pos + self._completed_intervals >= self.length
+        )
+        threshold_met = self._completed_intervals >= self.update_min_steps
+
+        if will_finish or threshold_met:
             self.make_step(self._completed_intervals)
             self.render_progress()
             self._completed_intervals = 0
