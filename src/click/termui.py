@@ -670,6 +670,15 @@ def style(
                   can be disabled to compose styles.
 
     .. versionchanged:: 8.5
+        A bytes or bytearray ``text`` is rejected with :exc:`TypeError`
+        instead of being wrapped by ``str()`` (which would have produced
+        the repr string ``"b'hello'"`` in the output, since bytes values
+        in Python 3 are not valid text). This matches ``secho()``, which
+        already short-circuits bytes before calling :func:`style` and
+        documents the asymmetry; pass ``text.decode("utf-8")`` (or the
+        appropriate codec) at the call site if you want styled bytes.
+
+    .. versionchanged:: 8.5
         All invalid color values raise :exc:`ValueError`. 256-color index
         ``0`` is not ignored
 
@@ -688,6 +697,14 @@ def style(
 
     .. versionadded:: 2.0
     """
+    if isinstance(text, (bytes, bytearray)):
+        msg = (
+            "style() text must be str, not bytes. "
+            "Decode the input first (e.g. text.decode('utf-8')) or call "
+            "click.secho() with bytes, which passes them through unstyled. "
+            "Got: %r" % text
+        )
+        raise TypeError(msg)
     if not isinstance(text, str):
         text = str(text)
 

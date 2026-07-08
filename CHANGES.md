@@ -17,6 +17,11 @@ Unreleased
   [discussion #3527](https://github.com/pallets/click/discussions/3527). {pr}`3581`
 - `style()` and `secho()` no longer silently drop the 256-color index `0`
   (black) passed as `fg` or `bg`, and now validate color arguments. {pr}`3677`
+- `style()` rejects a `bytes` or `bytearray` `text` argument with
+  `TypeError` instead of wrapping it in `str()` (which would have embedded
+  the bytes repr, e.g. `b'hello'`, in the styled output). This matches
+  the existing `secho()` contract, which already passes bytes through
+  to `echo()` unstyled.
 
 ## Version 8.4.2
 

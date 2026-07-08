@@ -107,6 +107,16 @@ def test_styling_invalid_color(param, value):
         click.style("x y", **{param: value})
 
 
+@pytest.mark.parametrize("input_text", [b"hello", bytearray(b"hello")])
+def test_styling_rejects_non_str_text(input_text):
+    # style() silently str()'d bytes/bytearray/None in earlier versions, which
+    # produced output like "b'hello'" wrapped in the requested ANSI codes --
+    # not the user's intent. Reject these up front and point at secho (which
+    # intentionally passes bytes through to echo unstyled) or text.decode().
+    with pytest.raises(TypeError, match="text must be str"):
+        click.style(input_text, fg="red")
+
+
 @pytest.mark.parametrize(("text", "expect"), [("\x1b[?25lx y\x1b[?25h", "x y")])
 def test_unstyle_other_ansi(text, expect):
     assert click.unstyle(text) == expect
