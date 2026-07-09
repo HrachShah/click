@@ -807,6 +807,8 @@ class BoolParamType(ParamType[bool]):
         """
         if isinstance(value, bool):
             return value
+        if not isinstance(value, str):
+            return None
         return BoolParamType.bool_states.get(value.strip().lower())
 
     def convert(
