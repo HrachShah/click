@@ -382,6 +382,17 @@ class ProgressBar(t.Generic[V]):
                 yield rv
                 self.update(1)
 
+            # Drain any updates that didn't reach the update_min_steps
+            # threshold so the final render shows the true position. When
+            # the iterable length isn't a multiple of update_min_steps,
+            # the last batch was buffered in `_completed_intervals` and
+            # would otherwise be lost between `finish()` and the final
+            # `render_progress()` below, leaving the bar a few steps
+            # short of completion (see pallets/click#3571).
+            if self._completed_intervals:
+                self.make_step(self._completed_intervals)
+                self._completed_intervals = 0
+
             self.finish()
             self.render_progress()
 

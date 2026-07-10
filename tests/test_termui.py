@@ -350,6 +350,31 @@ def test_progress_bar_update_min_steps(runner):
     assert bar.pos == 5
 
 
+def test_progressbar_show_pos_final_with_update_min_steps(runner, monkeypatch):
+    """When the iterable length isn't a multiple of ``update_min_steps``,
+    the trailing partial batch must still be drained so the final
+    ``show_pos=True`` render shows the real end position rather than
+    the last threshold-met position (pallets/click#3571).
+    """
+
+    @click.command()
+    def cli():
+        with click.progressbar(
+            range(20), show_pos=True, update_min_steps=7
+        ) as progress:
+            for _ in progress:
+                pass
+
+    monkeypatch.setattr(click._termui_impl, "isatty", lambda _: True)
+    output = runner.invoke(cli, []).output
+
+    assert "20/20" in output
+    # The final rendered line must show 20/20, not 14/20 (pallets/click#3571).
+    last_bar_line = [ln for ln in output.splitlines() if "[" in ln][-1]
+    assert "20/20" in last_bar_line
+    assert "14/20" not in last_bar_line
+
+
 @pytest.mark.parametrize("key_char", ("h", "H", "é", "À", " ", "字", "àH", "àR"))
 @pytest.mark.parametrize("echo", [True, False])
 @pytest.mark.skipif(not WIN, reason="Tests user-input using the msvcrt module.")
