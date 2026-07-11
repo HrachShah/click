@@ -135,7 +135,7 @@ class _FixupStream:
             self._stream.write(b"")
         except Exception:
             try:
-                self._stream.write(b"")
+                self._stream.write("")
             except Exception:
                 return False
         return True

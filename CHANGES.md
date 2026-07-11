@@ -2,6 +2,13 @@
 
 Unreleased
 
+- The `writable()` probe on `_FixupStream` re-tries the `write("")` call
+  with a `str` instead of re-raising the same `TypeError: write() argument
+  must be str, not bytes` against a text-only stream. Without the fix,
+  a text-only stream passed in as the binary output was always reported
+  as not writable, which broke `CliRunner`'s text-mode capture in some
+  configurations. {issue}`3642`
+
 - Supported versions of Windows enable ANSI terminal styles by default.
   Colorama is no longer a dependency and is not used. {issue}`2986` {pr}`3505`
 - {class}`Argument` accepts a `help` parameter, and help output includes

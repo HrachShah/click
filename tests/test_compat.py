@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import io
 import re
 import sys
 
 import pytest
 
 import click
+from click._compat import _FixupStream
 from click._compat import _ansi_re
 from click._compat import strip_ansi
 from click._compat import term_len
@@ -268,3 +270,68 @@ def test_truncate_visible(text, n, expected):
     out = _truncate_visible(text, n)
     assert out == expected
     assert term_len(out) <= max(n, 0)
+
+
+class _RejectingTextStream(io.RawIOBase):
+    """A minimal binary stream that accepts ``b""`` writes but rejects any
+    non-empty ``str`` write via a ``TypeError``. Used to verify that
+    ``_FixupStream.writable()`` probes with a str write in the fallback
+    branch, not the same ``b""`` that the first try-block already
+    accepted."""
+
+    def writable(self):
+        return False
+
+    def write(self, data):
+        if isinstance(data, str):
+            raise TypeError("write() of a string is not supported on a binary stream")
+        return 0
+
+
+class TestFixupStreamWritable:
+    """``_FixupStream.writable()`` falls back to a try/except probe of
+    ``stream.write(...)`` when the stream has no ``writable`` attribute.
+    The first probe passes ``b""``; if that raises, the second probe
+    must pass ``""`` (a ``str``), not the same ``b""`` that already
+    failed, so a text-vs-binary mismatch is actually detected."""
+
+    def test_writable_returns_true_for_normal_binary_stream(self):
+        """A regular ``BytesIO`` is writable."""
+        fs = _FixupStream(io.BytesIO())
+        assert fs.writable() is True
+
+    def test_writable_returns_false_for_text_only_stream(self):
+        """A binary facade over a stream that accepts ``b""`` but rejects
+        ``""`` (a ``str``) must be reported as not writable. The previous
+        implementation re-tried with the same ``b""`` after the first
+        attempt raised, so it incorrectly returned True."""
+        fs = _FixupStream(_RejectingTextStream())
+        assert fs.writable() is False
+
+    def test_writable_returns_true_when_both_probes_pass(self):
+        """A plain stream (no ``writable`` method) that accepts both
+        ``b""`` and ``""`` is reported as writable."""
+
+        class _AcceptsBoth:
+            def write(self, data):
+                return 0
+
+        fs = _FixupStream(_AcceptsBoth())
+        assert fs.writable() is True
+
+    def test_writable_returns_false_when_both_probes_fail(self):
+        """A plain stream that rejects both ``b""`` and ``""`` writes is
+        reported as not writable."""
+
+        class _RejectsAll:
+            def write(self, data):
+                raise OSError("nope")
+
+        fs = _FixupStream(_RejectsAll())
+        assert fs.writable() is False
+
+    def test_force_writable_short_circuits(self):
+        """``force_writable=True`` makes ``writable()`` return True without
+        calling the underlying stream's write at all."""
+        fs = _FixupStream(_RejectingTextStream(), force_writable=True)
+        assert fs.writable() is True
