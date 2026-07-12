@@ -962,3 +962,25 @@ def test_custom_version_option_receives_context(runner):
     result = runner.invoke(cli, ["--version"], prog_name="mytool")
     assert result.exit_code == 0
     assert result.output == "mytool 1.0\n"
+
+
+def test_datetime_convert_non_string_value_raises_badparameter():
+    """``DateTime.convert`` should produce a clean ``BadParameter`` for a
+    non-string value, not leak a raw ``TypeError`` from ``strptime``.
+
+    ``strptime`` raises ``TypeError`` (not ``ValueError``) when ``value`` is
+    not a string-like. Without the ``(ValueError, TypeError)`` catch in
+    ``_try_to_convert_date``, a ``None`` or ``int`` value would propagate the
+    ``TypeError`` out of ``convert`` and surface as an uncaught exception
+    instead of the standard "does not match the format" error a malformed
+    string already produces.
+    """
+    from click.exceptions import BadParameter
+
+    dt = click.DateTime()
+    for value in (None, 123, 1.5, b"2015-09-29", ["2015-09-29"]):
+        with pytest.raises(BadParameter) as exc_info:
+            dt.convert(value, None, None)
+        message = str(exc_info.value)
+        assert repr(value) in message
+        assert "does not match the format" in message
