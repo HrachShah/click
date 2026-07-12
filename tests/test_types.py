@@ -330,3 +330,23 @@ def test_bool_param_type_rejects_non_string_non_bool():
         with pytest.raises(click.BadParameter) as exc_info:
             bool_type.convert(bad, None, None)
         assert "is not a valid boolean" in exc_info.value.message
+
+
+def test_uuid_param_type_rejects_non_string():
+    """UUIDParameterType.convert must surface a BadParameter (not AttributeError)
+    for non-string, non-UUID inputs. The pre-fix path called .strip() on the
+    value before validating, so a caller passing an int, None, bytes, or list
+    crashed with ``AttributeError: 'X' object has no attribute 'strip'`` instead
+    of being told the value was not a valid UUID.
+    """
+    uuid_type = click.UUID
+    for bad in (None, 123, b"00000000-0000-0000-0000-000000000001", ["a"], {"k": "v"}):
+        with pytest.raises(click.BadParameter) as exc_info:
+            uuid_type.convert(bad, None, None)
+        assert "is not a valid UUID" in exc_info.value.message
+    # A real uuid.UUID is still accepted (round-trip).
+    import uuid
+    assert uuid_type.convert(uuid.UUID(int=1), None, None) == uuid.UUID(int=1)
+    # A valid string is still accepted and parsed.
+    assert uuid_type.convert(" 00000000-0000-0000-0000-000000000002 ", None, None) == uuid.UUID(int=2)
+    # A real uuid.UUID is still accepted (round-trip).

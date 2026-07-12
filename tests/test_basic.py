@@ -163,6 +163,8 @@ def test_int_option(runner, args, expect):
             "U:[821592c1-c50e-4971-9cd6-e89dc6832f86]",
         ),
         (["--u=x"], "Error: Invalid value for '--u': 'x' is not a valid UUID."),
+        (["--u=12345"], "Error: Invalid value for '--u': '12345' is not a valid UUID."),
+        (["--u=3.14"], "Error: Invalid value for '--u': '3.14' is not a valid UUID."),
     ],
 )
 def test_uuid_option(runner, args, expect):
