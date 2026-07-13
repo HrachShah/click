@@ -308,3 +308,17 @@ def test_choice_get_invalid_choice_message():
     choice = click.Choice(["a", "b", "c"])
     message = choice.get_invalid_choice_message("d", ctx=None)
     assert message == "'d' is not one of 'a', 'b', 'c'."
+
+
+def test_choice_rejects_empty_iterable():
+    """
+    Constructing a ``Choice`` with an empty iterable raises a
+    ``ValueError`` at construction time. An empty choice set
+    would otherwise accept no values and produce the confusing
+    "<value> is not one of ." rejection message, hiding the
+    configuration error until the first ``convert()`` call.
+    """
+    with pytest.raises(ValueError, match="empty"):
+        click.Choice([])
+    with pytest.raises(ValueError, match="empty"):
+        click.Choice(iter([]))
