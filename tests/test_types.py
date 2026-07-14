@@ -1,6 +1,8 @@
 import os.path
 import pathlib
 import platform
+import subprocess
+import sys
 import tempfile
 
 import pytest
@@ -125,6 +127,29 @@ def test_path_type(runner, cls, expect):
     assert result.return_value == expect
 
 
+def test_path_dash_no_byteswarning():
+    """Detecting the ``-`` dash sentinel must not compare ``bytes`` against
+    ``str``, which raises a ``BytesWarning`` under ``python -bb``.
+
+    The warning is only emitted when the interpreter runs with ``-b``, so this
+    has to be checked in a subprocess. ``-bb`` turns the warning into an error,
+    so a clean exit means no mismatched comparison happened.
+    """
+    program = (
+        "import click\n"
+        "convert = click.Path(allow_dash=True).convert\n"
+        "for value in ('-', '', b'-', b''):\n"
+        "    convert(value, None, None)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-bb", "-c", program],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "BytesWarning" not in result.stderr
+
+
 def _symlinks_supported():
     with tempfile.TemporaryDirectory(prefix="click-pytest-") as tempdir:
         target = os.path.join(tempdir, "target")
@@ -162,6 +187,71 @@ def test_path_resolve_symlink(tmp_path, runner):
     rel_link.symlink_to(pathlib.Path("..") / "file")
     rel_rv = path_type.convert(os.fspath(rel_link), param, ctx)
     assert rel_rv == test_file_str
+
+
+@pytest.mark.skipif(
+    not _symlinks_supported(), reason="The current OS or FS doesn't support symlinks."
+)
+def test_path_resolve_path_applies_to_executable_check(
+    tmp_path, monkeypatch
+):
+    """When ``resolve_path=True`` the executable check must run on the
+    resolved real path, not on the user-supplied (symlink) path.
+
+    Regression test: the executable branch used to call
+    ``os.access(value, os.X_OK)`` while every other branch on the same
+    block used ``os.access(rv, ...)``, so the path-resolution
+    ``resolve_path=True`` set by the user was silently ignored for the
+    executable check. With a real-executable symlink to a real-
+    non-executable file the check should fail; with a real-non-
+    executable symlink to a real-executable file it should pass.
+    """
+
+    real_noexec = tmp_path / "real_noexec"
+    real_noexec.write_text("")
+    real_noexec.chmod(0o644)
+
+    real_exec = tmp_path / "real_exec"
+    real_exec.write_text("")
+    real_exec.chmod(0o755)
+
+    link_to_noexec = tmp_path / "link_to_noexec"
+    os.symlink(real_noexec, link_to_noexec)
+
+    link_to_exec = tmp_path / "link_to_exec"
+    os.symlink(real_exec, link_to_exec)
+
+    path_type = click.Path(resolve_path=True, executable=True)
+    param = click.Argument(["a"], type=path_type)
+    ctx = click.Context(click.Command("cli", params=[param]))
+
+    # The X_OK check goes through os.access, which always returns True
+    # for root regardless of mode bits. Stub it out so the test is
+    # meaningful when the suite is run as root, and so we can assert
+    # which path got checked.
+    checked: list[str] = []
+
+    def fake_access(path, mode):
+        checked.append(os.fspath(path))
+        if mode != os.X_OK:
+            return True
+        # Pretend the real files have the X bit and the symlinks
+        # themselves don't, mirroring the on-disk mode bits set above.
+        return os.fspath(path) in (os.fspath(real_exec),)
+
+    monkeypatch.setattr(os, "access", fake_access)
+
+    # An executable symlink pointing at a non-executable real file
+    # should be rejected, because the resolved path is what gets
+    # checked.
+    with pytest.raises(click.BadParameter, match="is not executable"):
+        path_type.convert(os.fspath(link_to_noexec), param, ctx)
+    assert checked[-1] == os.fspath(real_noexec)
+
+    # A non-executable symlink pointing at an executable real file
+    # should be accepted.
+    assert path_type.convert(os.fspath(link_to_exec), param, ctx) == os.fspath(real_exec)
+    assert checked[-1] == os.fspath(real_exec)
 
 
 def _non_utf8_filenames_supported():

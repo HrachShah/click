@@ -1104,7 +1104,8 @@ class Path(ParamType[str | bytes | os.PathLike[str]]):
     ) -> str | bytes | os.PathLike[str]:
         rv = value
 
-        is_dash = self.file_okay and self.allow_dash and rv in (b"-", "-")
+        dash = b"-" if isinstance(rv, bytes) else "-"
+        is_dash = self.file_okay and self.allow_dash and rv == dash
 
         if not is_dash:
             if self.resolve_path:
@@ -1158,7 +1159,7 @@ class Path(ParamType[str | bytes | os.PathLike[str]]):
                     ctx,
                 )
 
-            if self.executable and not os.access(value, os.X_OK):
+            if self.executable and not os.access(rv, os.X_OK):
                 self.fail(
                     _("{name} {filename!r} is not executable.").format(
                         name=self.name.title(), filename=format_filename(value)
