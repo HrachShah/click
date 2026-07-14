@@ -502,7 +502,12 @@ class DateTime(ParamType[datetime]):
     def _try_to_convert_date(self, value: t.Any, format: str) -> datetime | None:
         try:
             return datetime.strptime(value, format)
-        except ValueError:
+        except (ValueError, TypeError):
+            # `strptime` raises `TypeError` when `value` is not a string-like
+            # (e.g. None, int, bytes). Without this branch, a non-string value
+            # would propagate `TypeError: strptime() argument 1 must be str,
+            # not X` out of `convert` instead of producing the same clean
+            # "does not match the format" error that a malformed string does.
             return None
 
     def convert(
@@ -1104,7 +1109,8 @@ class Path(ParamType[str | bytes | os.PathLike[str]]):
     ) -> str | bytes | os.PathLike[str]:
         rv = value
 
-        is_dash = self.file_okay and self.allow_dash and rv in (b"-", "-")
+        dash = b"-" if isinstance(rv, bytes) else "-"
+        is_dash = self.file_okay and self.allow_dash and rv == dash
 
         if not is_dash:
             if self.resolve_path:
