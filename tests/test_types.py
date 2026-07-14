@@ -1,6 +1,8 @@
 import os.path
 import pathlib
 import platform
+import subprocess
+import sys
 import tempfile
 
 import pytest
@@ -123,6 +125,29 @@ def test_path_type(runner, cls, expect):
     result = runner.invoke(cli, ["a/b/c.txt"], standalone_mode=False)
     assert result.exception is None
     assert result.return_value == expect
+
+
+def test_path_dash_no_byteswarning():
+    """Detecting the ``-`` dash sentinel must not compare ``bytes`` against
+    ``str``, which raises a ``BytesWarning`` under ``python -bb``.
+
+    The warning is only emitted when the interpreter runs with ``-b``, so this
+    has to be checked in a subprocess. ``-bb`` turns the warning into an error,
+    so a clean exit means no mismatched comparison happened.
+    """
+    program = (
+        "import click\n"
+        "convert = click.Path(allow_dash=True).convert\n"
+        "for value in ('-', '', b'-', b''):\n"
+        "    convert(value, None, None)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-bb", "-c", program],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "BytesWarning" not in result.stderr
 
 
 def _symlinks_supported():
@@ -283,3 +308,17 @@ def test_choice_get_invalid_choice_message():
     choice = click.Choice(["a", "b", "c"])
     message = choice.get_invalid_choice_message("d", ctx=None)
     assert message == "'d' is not one of 'a', 'b', 'c'."
+
+
+def test_choice_rejects_empty_iterable():
+    """
+    Constructing a ``Choice`` with an empty iterable raises a
+    ``ValueError`` at construction time. An empty choice set
+    would otherwise accept no values and produce the confusing
+    "<value> is not one of ." rejection message, hiding the
+    configuration error until the first ``convert()`` call.
+    """
+    with pytest.raises(ValueError, match="empty"):
+        click.Choice([])
+    with pytest.raises(ValueError, match="empty"):
+        click.Choice(iter([]))

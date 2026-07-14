@@ -319,6 +319,18 @@ class Choice(ParamType[_ValueT_co], t.Generic[_ValueT_co]):
     ) -> None:
         self.choices = tuple(choices)
         self.case_sensitive = case_sensitive
+        # An empty ``Choice`` would always reject every value with the
+        # confusing ``"X is not one of ."`` message (the joined-choices
+        # string collapses to a trailing dot). Surface that as an
+        # explicit construction-time error so the bug shape is obvious
+        # at the ``Choice(...)`` call site rather than at the first
+        # ``convert()`` call.
+        if not self.choices:
+            raise ValueError(
+                "Choice cannot be constructed with an empty iterable; "
+                "every value would be rejected with the message "
+                "'<value> is not one of .'."
+            )
 
     def to_info_dict(self) -> ChoiceInfoDict[_ValueT_co]:
         return {
@@ -1104,7 +1116,8 @@ class Path(ParamType[str | bytes | os.PathLike[str]]):
     ) -> str | bytes | os.PathLike[str]:
         rv = value
 
-        is_dash = self.file_okay and self.allow_dash and rv in (b"-", "-")
+        dash = b"-" if isinstance(rv, bytes) else "-"
+        is_dash = self.file_okay and self.allow_dash and rv == dash
 
         if not is_dash:
             if self.resolve_path:
