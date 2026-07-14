@@ -807,6 +807,8 @@ class BoolParamType(ParamType[bool]):
         """
         if isinstance(value, bool):
             return value
+        if not isinstance(value, str):
+            return None
         return BoolParamType.bool_states.get(value.strip().lower())
 
     def convert(
@@ -835,6 +837,13 @@ class UUIDParameterType(ParamType[uuid.UUID]):
     ) -> uuid.UUID:
         if isinstance(value, uuid.UUID):
             return value
+
+        if not isinstance(value, str):
+            self.fail(
+                _("{value!r} is not a valid UUID.").format(value=value),
+                param,
+                ctx,
+            )
 
         value = value.strip()
 
@@ -1104,7 +1113,8 @@ class Path(ParamType[str | bytes | os.PathLike[str]]):
     ) -> str | bytes | os.PathLike[str]:
         rv = value
 
-        is_dash = self.file_okay and self.allow_dash and rv in (b"-", "-")
+        dash = b"-" if isinstance(rv, bytes) else "-"
+        is_dash = self.file_okay and self.allow_dash and rv == dash
 
         if not is_dash:
             if self.resolve_path:
