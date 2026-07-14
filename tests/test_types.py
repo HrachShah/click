@@ -1,6 +1,8 @@
 import os.path
 import pathlib
 import platform
+import subprocess
+import sys
 import tempfile
 
 import pytest
@@ -123,6 +125,29 @@ def test_path_type(runner, cls, expect):
     result = runner.invoke(cli, ["a/b/c.txt"], standalone_mode=False)
     assert result.exception is None
     assert result.return_value == expect
+
+
+def test_path_dash_no_byteswarning():
+    """Detecting the ``-`` dash sentinel must not compare ``bytes`` against
+    ``str``, which raises a ``BytesWarning`` under ``python -bb``.
+
+    The warning is only emitted when the interpreter runs with ``-b``, so this
+    has to be checked in a subprocess. ``-bb`` turns the warning into an error,
+    so a clean exit means no mismatched comparison happened.
+    """
+    program = (
+        "import click\n"
+        "convert = click.Path(allow_dash=True).convert\n"
+        "for value in ('-', '', b'-', b''):\n"
+        "    convert(value, None, None)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-bb", "-c", program],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "BytesWarning" not in result.stderr
 
 
 def _symlinks_supported():
@@ -283,3 +308,25 @@ def test_choice_get_invalid_choice_message():
     choice = click.Choice(["a", "b", "c"])
     message = choice.get_invalid_choice_message("d", ctx=None)
     assert message == "'d' is not one of 'a', 'b', 'c'."
+
+
+# Regression: a non-string, non-bool value (e.g. None from a missing env var,
+# an int, or bytes) used to crash str_to_bool with AttributeError on .strip()
+# before convert() could surface the standard "not a valid boolean" error.
+def test_bool_param_type_rejects_non_string_non_bool():
+    bool_type = click.BOOL
+    # str_to_bool itself should return None for these so convert() can fail cleanly.
+    assert bool_type.str_to_bool(None) is None
+    assert bool_type.str_to_bool(123) is None
+    assert bool_type.str_to_bool(b"yes") is None
+    assert bool_type.str_to_bool(["yes"]) is None
+    # The string and bool fast paths must still work.
+    assert bool_type.str_to_bool("yes") is True
+    assert bool_type.str_to_bool(True) is True
+    assert bool_type.str_to_bool(" no ") is False
+    assert bool_type.str_to_bool(False) is False
+    # And convert() must surface a BadParameter (not AttributeError) for each.
+    for bad in (None, 123, b"yes", ["yes"], {"k": "v"}):
+        with pytest.raises(click.BadParameter) as exc_info:
+            bool_type.convert(bad, None, None)
+        assert "is not a valid boolean" in exc_info.value.message
