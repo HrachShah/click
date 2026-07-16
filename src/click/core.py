@@ -17,7 +17,7 @@ from contextlib import ExitStack
 from functools import update_wrapper
 from gettext import gettext as _
 from gettext import ngettext
-from itertools import repeat
+from itertools import islice
 from types import TracebackType
 
 from . import types
@@ -54,6 +54,10 @@ if t.TYPE_CHECKING:
 
 F = t.TypeVar("F", bound="t.Callable[..., t.Any]")
 V = t.TypeVar("V")
+
+# Reserved storage name of the automatic help option. No user parameter is
+# expected to claim it.
+_HELP_OPTION_STORAGE_NAME = "_click_default_help"
 
 
 def _complete_visible_commands(
@@ -113,7 +117,13 @@ def _format_deprecated_suffix(deprecated: bool | str) -> str:
 
 
 def batch(iterable: cabc.Iterable[V], batch_size: int) -> list[tuple[V, ...]]:
-    return list(zip(*repeat(iter(iterable), batch_size), strict=False))
+    iterator = iter(iterable)
+    batches = []
+
+    while values := tuple(islice(iterator, batch_size)):
+        batches.append(values)
+
+    return batches
 
 
 @contextmanager
@@ -1119,6 +1129,37 @@ class Command:
                     stacklevel=3,
                 )
 
+            # Options may deliberately share a storage name to compete for
+            # the same value (feature switches), but an argument sharing a
+            # name silently overwrites the other parameter's value.
+            names_counter = Counter(param.name for param in params)
+            duplicate_names = (
+                name for name, count in names_counter.items() if count > 1
+            )
+
+            for duplicate_name in duplicate_names:
+                sharers = [param for param in params if param.name == duplicate_name]
+
+                if help_option in sharers:
+                    warnings.warn(
+                        (
+                            f"The name {duplicate_name!r} is reserved for the "
+                            "automatic help option. Give the parameter a "
+                            "different name."
+                        ),
+                        stacklevel=3,
+                    )
+                elif any(isinstance(param, Argument) for param in sharers):
+                    warnings.warn(
+                        (
+                            f"The name {duplicate_name!r} is used by an argument "
+                            "and another parameter. They will overwrite each "
+                            "other's value during parsing. Give each parameter "
+                            "a unique name."
+                        ),
+                        stacklevel=3,
+                    )
+
         return params
 
     def format_usage(self, ctx: Context, formatter: HelpFormatter) -> None:
@@ -1153,6 +1194,11 @@ class Command:
 
         Skipped if :attr:`add_help_option` is ``False``.
 
+        .. versionchanged:: 8.5.0
+            The help option stores its value under the reserved name
+            ``_click_default_help``, so a parameter named ``help`` no
+            longer breaks parsing.
+
         .. versionchanged:: 8.1.8
             The help option is now cached to avoid creating it multiple times.
         """
@@ -1169,8 +1215,10 @@ class Command:
             # Avoid circular import.
             from .decorators import help_option
 
-            # Apply help_option decorator and pop resulting option
-            help_option(*help_option_names)(self)
+            # The help option never exposes its value, so it uses a reserved
+            # storage name, keeping it clear of user parameters (like an
+            # argument named "help") that would otherwise clobber its value.
+            help_option(*help_option_names, _HELP_OPTION_STORAGE_NAME)(self)
             self._help_option = self.params.pop()  # type: ignore[assignment]
 
         return self._help_option
@@ -2466,7 +2514,7 @@ class Parameter(ABC):
                     value = self.type.split_envvar_value(value)
 
         if value is UNSET:
-            default_value = self.get_default(ctx)
+            default_value = self.get_default(ctx, call=not ctx.resilient_parsing)
             if default_value is not UNSET:
                 value = default_value
                 source = ParameterSource.DEFAULT
@@ -3607,9 +3655,14 @@ class Argument(Parameter):
         var = self.type.get_metavar(param=self, ctx=ctx)
         if not var:
             var = self.name.upper()
+        # Types like ``Choice`` and ``DateTime`` already surround their metavar
+        # with square brackets to enumerate the allowed values. Reuse those
+        # outer brackets as the optional-argument indicator instead of wrapping
+        # the metavar in a second pair, which would produce ``[[a|b|c]]``.
+        already_bracketed = var.startswith("[") and var.endswith("]")
         if self.deprecated:
             var += "!"
-        if not self.required:
+        if not self.required and not already_bracketed:
             var = f"[{var}]"
         if self.nargs != 1:
             var += "..."

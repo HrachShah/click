@@ -585,3 +585,34 @@ def test_fish_format_completion_escapes_help():
     # The newline is escaped to the literal characters backslash-n and the tab
     # becomes a space, so each completion stays on one line for fish.
     assert fc.format_completion(item) == "plain,--at\tfirst\\nsecond third"
+
+
+def test_resilient_parsing_does_not_call_default_callbacks():
+    """Callable defaults must not be evaluated during shell completion.
+
+    The whole point of ``resilient_parsing=True`` in ``shell_complete`` is to
+    avoid the side effects of normal parsing (file I/O, network, expensive
+    computations).  A parameter's default that is a callable used to be
+    invoked anyway, so a user's expensive default ran on every tab-completion
+    keystroke.  This regression test guards against that.
+    """
+    import click
+
+    calls = []
+
+    def expensive_default():
+        calls.append("called")
+        return "expensive"
+
+    cli = click.Command(
+        "cli",
+        add_help_option=False,
+        params=[
+            Option(["--foo"], default=expensive_default),
+        ],
+    )
+    _get_completions(cli, args=[], incomplete="")
+
+    assert calls == [], (
+        f"expensive default must not run under resilient_parsing, got: {calls}"
+    )
