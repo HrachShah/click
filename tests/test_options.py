@@ -754,6 +754,12 @@ def test_nargs_envvar(runner):
     assert not result.exception
     assert result.output == "x|1\ny|2\n"
 
+    result = runner.invoke(
+        cmd, [], auto_envvar_prefix="TEST", env={"TEST_ARG": "x 1 y"}
+    )
+    assert result.exit_code != 0
+    assert "Takes 2 values but 1 was given" in result.output
+
 
 def test_show_envvar(runner):
     @click.command()
