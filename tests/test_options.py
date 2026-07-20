@@ -453,6 +453,17 @@ def test_multiple_envvar(runner):
     assert not result.exception
     assert result.output == "foo|bar\n"
 
+    @click.command()
+    @click.option("--arg", nargs=2, multiple=True, envvar="X")
+    def cmd(arg):
+        click.echo(repr(arg))
+
+    result = runner.invoke(
+        cmd, [], env={"X": "one two three"}, standalone_mode=False
+    )
+    assert isinstance(result.exception, click.BadParameter)
+    assert "Takes 2 values but 1 was given" in result.exception.format_message()
+
 
 @pytest.mark.parametrize(
     ("envvar_name", "envvar_value", "expected"),

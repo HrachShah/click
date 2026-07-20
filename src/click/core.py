@@ -17,7 +17,7 @@ from contextlib import ExitStack
 from functools import update_wrapper
 from gettext import gettext as _
 from gettext import ngettext
-from itertools import repeat
+from itertools import islice
 from types import TracebackType
 
 from . import types
@@ -113,7 +113,13 @@ def _format_deprecated_suffix(deprecated: bool | str) -> str:
 
 
 def batch(iterable: cabc.Iterable[V], batch_size: int) -> list[tuple[V, ...]]:
-    return list(zip(*repeat(iter(iterable), batch_size), strict=False))
+    iterator = iter(iterable)
+    batches = []
+
+    while values := tuple(islice(iterator, batch_size)):
+        batches.append(values)
+
+    return batches
 
 
 @contextmanager
