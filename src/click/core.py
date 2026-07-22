@@ -113,6 +113,9 @@ def _format_deprecated_suffix(deprecated: bool | str) -> str:
 
 
 def batch(iterable: cabc.Iterable[V], batch_size: int) -> list[tuple[V, ...]]:
+    if batch_size <= 0:
+        raise ValueError("batch_size must be greater than zero")
+
     iterator = iter(iterable)
     batches = []
 
