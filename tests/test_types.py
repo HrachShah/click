@@ -308,3 +308,12 @@ def test_choice_get_invalid_choice_message():
     choice = click.Choice(["a", "b", "c"])
     message = choice.get_invalid_choice_message("d", ctx=None)
     assert message == "'d' is not one of 'a', 'b', 'c'."
+
+
+def test_bool_param_type_rejects_non_string_non_bool():
+    bool_type = click.types.BoolParamType()
+
+    for bad in (None, 1, b"true", ["true"]):
+        with pytest.raises(click.BadParameter) as exc_info:
+            bool_type.convert(bad, None, None)
+        assert "is not a valid boolean" in exc_info.value.message
