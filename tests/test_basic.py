@@ -188,6 +188,11 @@ def test_group_from_list(runner):
     assert result.output == "sub"
 
 
+def test_uuid_type_rejects_non_string_values():
+    with pytest.raises(click.BadParameter, match="42.*not a valid UUID"):
+        click.UUID.convert(42, None, None)
+
+
 @pytest.mark.parametrize(
     ("args", "expect"),
     [

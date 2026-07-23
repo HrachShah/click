@@ -838,6 +838,13 @@ class UUIDParameterType(ParamType[uuid.UUID]):
         if isinstance(value, uuid.UUID):
             return value
 
+        if not isinstance(value, str):
+            self.fail(
+                _("{value!r} is not a valid UUID.").format(value=value),
+                param,
+                ctx,
+            )
+
         value = value.strip()
 
         try:
