@@ -70,6 +70,14 @@ def test_func_param_type_uses_value_error_message(error_message, expected):
     assert expected in exc_info.value.message
 
 
+def test_number_param_type_rejects_values_without_numeric_conversion():
+    for type in (click.INT, click.FLOAT):
+        for value in (None, [], {}):
+            with pytest.raises(click.BadParameter) as exc_info:
+                type.convert(value, None, None)
+            assert "is not a valid" in exc_info.value.message
+
+
 def test_float_range_no_clamp_open():
     with pytest.raises(TypeError):
         click.FloatRange(0, 1, max_open=True, clamp=True)
