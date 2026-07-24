@@ -137,6 +137,14 @@ class ProgressBar(t.Generic[V]):
         exc_value: BaseException | None,
         tb: TracebackType | None,
     ) -> None:
+        # Drain any pending steps that have not yet been rendered. Without
+        # this, when ``update_min_steps`` does not evenly divide ``length``,
+        # the final state of the bar can be stuck at an earlier position
+        # even after iteration has produced every item.
+        if self._completed_intervals:
+            self.make_step(self._completed_intervals)
+            self.render_progress()
+            self._completed_intervals = 0
         self.render_finish()
 
     def __iter__(self) -> cabc.Iterator[V]:
