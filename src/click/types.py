@@ -542,7 +542,7 @@ class _NumberParamTypeBase(
     ) -> _ValueT_co:
         try:
             return self._number_class(value)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             self.fail(
                 _("{value!r} is not a valid {number_type}.").format(
                     value=value, number_type=self.name

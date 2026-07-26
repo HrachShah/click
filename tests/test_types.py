@@ -78,6 +78,13 @@ def test_number_param_type_rejects_values_without_numeric_conversion():
             assert "is not a valid" in exc_info.value.message
 
 
+def test_number_param_type_rejects_integer_overflow():
+    for type in (click.INT, click.FLOAT):
+        with pytest.raises(click.BadParameter) as exc_info:
+            type.convert(10**1000, None, None)
+        assert "is not a valid" in exc_info.value.message
+
+
 def test_float_range_no_clamp_open():
     with pytest.raises(TypeError):
         click.FloatRange(0, 1, max_open=True, clamp=True)
