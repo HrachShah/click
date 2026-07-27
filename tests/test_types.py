@@ -51,6 +51,12 @@ def test_range_fail(type, value, expect):
     assert expect in exc_info.value.message
 
 
+@pytest.mark.parametrize("value", [float("inf"), float("-inf")])
+def test_integer_type_reports_overflow_as_bad_parameter(value):
+    with pytest.raises(click.BadParameter, match="is not a valid integer"):
+        click.INT.convert(value, None, None)
+
+
 @pytest.mark.parametrize(
     ("error_message", "expected"),
     [
