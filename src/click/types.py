@@ -3,6 +3,7 @@ from __future__ import annotations
 import abc
 import collections.abc as cabc
 import enum
+import math
 import os
 import stat
 import sys
@@ -612,6 +613,14 @@ class _NumberRangeBase(
 
         rv = super().convert(value, param, ctx)
         min = self.min
+        if isinstance(rv, float) and math.isnan(rv) and (min is not None or self.max is not None):
+            self.fail(
+                _("{value} is not in the range {range}.").format(
+                    value=rv, range=self._describe_range()
+                ),
+                param,
+                ctx,
+            )
         max = self.max
         lt_min: bool = min is not None and (
             operator.le if self.min_open else operator.lt

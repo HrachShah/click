@@ -42,6 +42,7 @@ def test_range(type, value, expect):
         (click.IntRange(0, 5, max_open=True), 5, "0<=x<5"),
         (click.FloatRange(0.5, min_open=True), 0.5, "x>0.5"),
         (click.FloatRange(max=1.5, max_open=True), 1.5, "x<1.5"),
+        (click.FloatRange(0, 1), "nan", "nan is not in the range 0<=x<=1"),
     ],
 )
 def test_range_fail(type, value, expect):
