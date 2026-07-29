@@ -595,6 +595,8 @@ class _NumberRangeBase(
         self.min_open = min_open
         self.max_open = max_open
         self.clamp = clamp
+        if min is not None and max is not None and min > max:
+            raise TypeError("Minimum is greater than maximum.")
 
         if min is not None and max is not None and min > max:
             raise TypeError("Minimum is greater than maximum.")
