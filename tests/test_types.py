@@ -85,6 +85,12 @@ def test_float_param_type_rejects_integer_overflow():
     assert "is not a valid" in exc_info.value.message
 
 
+def test_number_range_rejects_reversed_bounds():
+    for range_type in (click.IntRange, click.FloatRange):
+        with pytest.raises(TypeError, match="Minimum is greater than maximum"):
+            range_type(5, 1)
+
+
 def test_float_range_no_clamp_open():
     with pytest.raises(TypeError):
         click.FloatRange(0, 1, max_open=True, clamp=True)

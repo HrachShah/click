@@ -596,6 +596,9 @@ class _NumberRangeBase(
         self.max_open = max_open
         self.clamp = clamp
 
+        if min is not None and max is not None and min > max:
+            raise TypeError("Minimum is greater than maximum.")
+
     def to_info_dict(self) -> NumberRangeInfoDict[_FloatValueT_co]:
         return {
             "min": self.min,
