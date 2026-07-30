@@ -91,6 +91,12 @@ def test_number_range_rejects_reversed_bounds():
             range_type(5, 1)
 
 
+def test_float_range_rejects_nan_bounds():
+    for kwargs in ({"min": float("nan")}, {"max": float("nan")}):
+        with pytest.raises(TypeError, match="Range bounds cannot be NaN"):
+            click.FloatRange(**kwargs)
+
+
 def test_float_range_no_clamp_open():
     with pytest.raises(TypeError):
         click.FloatRange(0, 1, max_open=True, clamp=True)
