@@ -3,6 +3,7 @@ from __future__ import annotations
 import abc
 import collections.abc as cabc
 import enum
+import math
 import os
 import stat
 import sys
@@ -542,7 +543,7 @@ class _NumberParamTypeBase(
     ) -> _ValueT_co:
         try:
             return self._number_class(value)
-        except ValueError:
+        except (TypeError, ValueError, OverflowError):
             self.fail(
                 _("{value!r} is not a valid {number_type}.").format(
                     value=value, number_type=self.name
@@ -594,6 +595,15 @@ class _NumberRangeBase(
         self.min_open = min_open
         self.max_open = max_open
         self.clamp = clamp
+        if min is not None and max is not None and min > max:
+            raise TypeError("Minimum is greater than maximum.")
+        if (isinstance(min, float) and math.isnan(min)) or (
+            isinstance(max, float) and math.isnan(max)
+        ):
+            raise TypeError("Range bounds cannot be NaN.")
+
+        if min is not None and max is not None and min > max:
+            raise TypeError("Minimum is greater than maximum.")
 
     def to_info_dict(self) -> NumberRangeInfoDict[_FloatValueT_co]:
         return {
@@ -612,6 +622,14 @@ class _NumberRangeBase(
 
         rv = super().convert(value, param, ctx)
         min = self.min
+        if isinstance(rv, float) and math.isnan(rv) and (min is not None or self.max is not None):
+            self.fail(
+                _("{value} is not in the range {range}.").format(
+                    value=rv, range=self._describe_range()
+                ),
+                param,
+                ctx,
+            )
         max = self.max
         lt_min: bool = min is not None and (
             operator.le if self.min_open else operator.lt

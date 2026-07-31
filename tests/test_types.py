@@ -42,6 +42,7 @@ def test_range(type, value, expect):
         (click.IntRange(0, 5, max_open=True), 5, "0<=x<5"),
         (click.FloatRange(0.5, min_open=True), 0.5, "x>0.5"),
         (click.FloatRange(max=1.5, max_open=True), 1.5, "x<1.5"),
+        (click.FloatRange(0, 1), "nan", "nan is not in the range 0<=x<=1"),
     ],
 )
 def test_range_fail(type, value, expect):
@@ -70,9 +71,46 @@ def test_func_param_type_uses_value_error_message(error_message, expected):
     assert expected in exc_info.value.message
 
 
+def test_number_param_type_rejects_values_without_numeric_conversion():
+    for type in (click.INT, click.FLOAT):
+        for value in (None, [], {}):
+            with pytest.raises(click.BadParameter) as exc_info:
+                type.convert(value, None, None)
+            assert "is not a valid" in exc_info.value.message
+
+
+def test_float_param_type_rejects_integer_overflow():
+    with pytest.raises(click.BadParameter) as exc_info:
+        click.FLOAT.convert(10**1000, None, None)
+    assert "is not a valid" in exc_info.value.message
+
+
+def test_number_range_rejects_reversed_bounds():
+    for range_type in (click.IntRange, click.FloatRange):
+        with pytest.raises(TypeError, match="Minimum is greater than maximum"):
+            range_type(5, 1)
+
+
+def test_number_range_accepts_large_integer_bounds():
+    for range_type in (click.IntRange, click.FloatRange):
+        range_type(min=10**1000)
+        range_type(max=10**1000)
+
+
+def test_float_range_rejects_nan_bounds():
+    for kwargs in ({"min": float("nan")}, {"max": float("nan")}):
+        with pytest.raises(TypeError, match="Range bounds cannot be NaN"):
+            click.FloatRange(**kwargs)
+
+
 def test_float_range_no_clamp_open():
     with pytest.raises(TypeError):
         click.FloatRange(0, 1, max_open=True, clamp=True)
+
+def test_range_rejects_reversed_bounds():
+    for range_type in (click.IntRange, click.FloatRange):
+        with pytest.raises(TypeError, match="Minimum is greater than maximum"):
+            range_type(5, 1)
 
     sneaky = click.FloatRange(0, 1, max_open=True)
     sneaky.clamp = True
