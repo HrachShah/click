@@ -597,8 +597,8 @@ class _NumberRangeBase(
         self.clamp = clamp
         if min is not None and max is not None and min > max:
             raise TypeError("Minimum is greater than maximum.")
-        if (min is not None and math.isnan(min)) or (
-            max is not None and math.isnan(max)
+        if (isinstance(min, float) and math.isnan(min)) or (
+            isinstance(max, float) and math.isnan(max)
         ):
             raise TypeError("Range bounds cannot be NaN.")
 
