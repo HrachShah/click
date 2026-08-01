@@ -53,7 +53,7 @@ def test_range_fail(type, value, expect):
 
 @pytest.mark.parametrize("value", ["nan", "NaN"])
 def test_float_range_rejects_nan(value):
-    with pytest.raises(click.BadParameter, match="is not a valid float range"):
+    with pytest.raises(click.BadParameter, match="is not in the range"):
         click.FloatRange(0, 1).convert(value, None, None)
 
 
