@@ -660,6 +660,15 @@ def _write_pager_from_multiple_sites(pager):
     pager.write("suffix\n")
 
 
+def test_tempfile_pager_yields_text_stream(monkeypatch):
+    import subprocess
+
+    monkeypatch.setattr(subprocess, "call", lambda *args, **kwargs: 0)
+
+    with click._termui_impl._tempfilepager([sys.executable]) as (stream, _, _):
+        stream.write("hello\n")
+
+
 @pytest.mark.skipif(
     WIN,
     reason="Exercises the pipe pager path; Windows uses _tempfilepager.",
