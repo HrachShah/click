@@ -660,6 +660,48 @@ def _write_pager_from_multiple_sites(pager):
     pager.write("suffix\n")
 
 
+def test_tempfile_pager_yields_text_stream(monkeypatch):
+    import subprocess
+
+    monkeypatch.setattr(subprocess, "call", lambda *args, **kwargs: 0)
+
+    with click._termui_impl._tempfilepager([sys.executable]) as (stream, _, _):
+        stream.write("hello\n")
+
+
+def test_tempfile_pager_closes_and_removes_file_on_writer_error(monkeypatch):
+    import subprocess
+
+    opened = {}
+
+    class RecordingFile:
+        closed = False
+
+        def flush(self):
+            pass
+
+        def close(self):
+            self.closed = True
+
+    def named_temporary_file(**kwargs):
+        opened["file"] = RecordingFile()
+        opened["file"].name = opened["name"] = "pager-output.txt"
+        return opened["file"]
+
+    import tempfile
+
+    monkeypatch.setattr(tempfile, "NamedTemporaryFile", named_temporary_file)
+    monkeypatch.setattr(subprocess, "call", lambda *args, **kwargs: 0)
+    monkeypatch.setattr(click._termui_impl.os, "unlink", lambda name: opened.setdefault("removed", name))
+
+    with pytest.raises(RuntimeError, match="writer failed"):
+        with click._termui_impl._tempfilepager([sys.executable]) as (stream, _, _):
+            raise RuntimeError("writer failed")
+
+    assert opened["file"].closed
+    assert opened["removed"] == opened["name"]
+
+
 @pytest.mark.skipif(
     WIN,
     reason="Exercises the pipe pager path; Windows uses _tempfilepager.",
