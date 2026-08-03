@@ -630,6 +630,8 @@ def _tempfilepager(
         f.close()
         subprocess.call([str(cmd_path), f.name])
     finally:
+        if not f.closed:
+            f.close()
         os.unlink(f.name)
 
 
