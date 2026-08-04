@@ -51,6 +51,13 @@ def test_range_fail(type, value, expect):
     assert expect in exc_info.value.message
 
 
+def test_datetime_ignores_non_string_values_when_trying_formats():
+    date_type = click.DateTime(["%Y-%m-%d"])
+
+    with pytest.raises(click.BadParameter):
+        date_type.convert(None, None, None)
+
+
 @pytest.mark.parametrize("value", ["nan", "NaN"])
 def test_float_range_rejects_nan(value):
     with pytest.raises(click.BadParameter, match="is not a valid float range"):
