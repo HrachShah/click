@@ -3,6 +3,7 @@ from __future__ import annotations
 import abc
 import collections.abc as cabc
 import enum
+import math
 import os
 import stat
 import sys
@@ -594,6 +595,12 @@ class _NumberRangeBase(
         self.min_open = min_open
         self.max_open = max_open
         self.clamp = clamp
+        if min is not None and max is not None and min > max:
+            raise TypeError("Minimum is greater than maximum.")
+        if (isinstance(min, float) and math.isnan(min)) or (
+            isinstance(max, float) and math.isnan(max)
+        ):
+            raise TypeError("Range bounds cannot be NaN.")
 
     def to_info_dict(self) -> NumberRangeInfoDict[_FloatValueT_co]:
         return {
