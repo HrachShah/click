@@ -70,6 +70,12 @@ def test_func_param_type_uses_value_error_message(error_message, expected):
     assert expected in exc_info.value.message
 
 
+@pytest.mark.parametrize("value", [None, 123, object()])
+def test_datetime_rejects_non_string_values(value):
+    with pytest.raises(click.BadParameter, match="does not match the format"):
+        click.DateTime(["%Y-%m-%d"]).convert(value, None, None)
+
+
 def test_float_range_no_clamp_open():
     with pytest.raises(TypeError):
         click.FloatRange(0, 1, max_open=True, clamp=True)
