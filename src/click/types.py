@@ -502,7 +502,7 @@ class DateTime(ParamType[datetime]):
     def _try_to_convert_date(self, value: t.Any, format: str) -> datetime | None:
         try:
             return datetime.strptime(value, format)
-        except ValueError:
+        except (TypeError, ValueError):
             return None
 
     def convert(

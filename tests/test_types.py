@@ -308,3 +308,10 @@ def test_choice_get_invalid_choice_message():
     choice = click.Choice(["a", "b", "c"])
     message = choice.get_invalid_choice_message("d", ctx=None)
     assert message == "'d' is not one of 'a', 'b', 'c'."
+
+
+def test_datetime_rejects_non_string_values_as_bad_parameters():
+    date_type = click.DateTime(["%Y-%m-%d"])
+
+    with pytest.raises(click.BadParameter, match="123 does not match the format"):
+        date_type.convert(123, None, None)
