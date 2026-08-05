@@ -608,9 +608,18 @@ class _NumberRangeBase(
     def convert(
         self, value: _ValueT_contra, param: Parameter | None, ctx: Context | None
     ) -> _FloatValueT_co:
+        import math
         import operator
 
         rv = super().convert(value, param, ctx)
+        if isinstance(rv, float) and math.isnan(rv):
+            self.fail(
+                _("{value!r} is not a valid {number_type}.").format(
+                    value=value, number_type=self.name
+                ),
+                param,
+                ctx,
+            )
         min = self.min
         max = self.max
         lt_min: bool = min is not None and (
