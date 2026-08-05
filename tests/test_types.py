@@ -76,6 +76,13 @@ def test_datetime_rejects_non_string_values(value):
         click.DateTime(["%Y-%m-%d"]).convert(value, None, None)
 
 
+@pytest.mark.parametrize("value", [None, object()])
+def test_number_types_report_non_numeric_values(value):
+    for number_type in (click.INT, click.FLOAT):
+        with pytest.raises(click.BadParameter, match="not a valid"):
+            number_type.convert(value, None, None)
+
+
 def test_number_range_rejects_reversed_bounds():
     for range_type in (click.IntRange, click.FloatRange):
         with pytest.raises(TypeError, match="Minimum is greater than maximum"):
