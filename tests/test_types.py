@@ -83,6 +83,11 @@ def test_number_types_report_non_numeric_values(value):
             number_type.convert(value, None, None)
 
 
+def test_float_range_rejects_nan_values():
+    with pytest.raises(click.BadParameter, match="not a valid float range"):
+        click.FloatRange().convert("nan", None, None)
+
+
 def test_number_range_rejects_reversed_bounds():
     for range_type in (click.IntRange, click.FloatRange):
         with pytest.raises(TypeError, match="Minimum is greater than maximum"):
