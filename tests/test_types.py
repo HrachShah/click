@@ -319,3 +319,9 @@ def test_choice_get_invalid_choice_message():
     choice = click.Choice(["a", "b", "c"])
     message = choice.get_invalid_choice_message("d", ctx=None)
     assert message == "'d' is not one of 'a', 'b', 'c'."
+
+
+def test_bool_param_type_rejects_non_string_values():
+    for value in (None, 1, object()):
+        with pytest.raises(click.BadParameter, match="not a valid boolean"):
+            click.BOOL.convert(value, None, None)
