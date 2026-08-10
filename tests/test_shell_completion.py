@@ -345,6 +345,20 @@ def _patch_for_completion(monkeypatch):
     )
 
 
+def test_bash_version_check_handles_unusable_executable(monkeypatch, capsys):
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/bash")
+
+    def run(*args, **kwargs):
+        raise OSError("permission denied")
+
+    monkeypatch.setattr("subprocess.run", run)
+
+    click.shell_completion.BashComplete._check_version()
+
+    assert "couldn't detect bash version" in capsys.readouterr().err.lower()
+
+
+
 @pytest.mark.parametrize("shell", ["bash", "zsh", "fish"])
 @pytest.mark.usefixtures("_patch_for_completion")
 def test_full_source(runner, shell):

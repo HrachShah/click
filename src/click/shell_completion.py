@@ -323,11 +323,15 @@ class BashComplete(ShellComplete):
         if bash_exe is None:
             match = None
         else:
-            output = subprocess.run(
-                [bash_exe, "--norc", "-c", 'echo "${BASH_VERSION}"'],
-                stdout=subprocess.PIPE,
-            )
-            match = re.search(r"^(\d+)\.(\d+)\.\d+", output.stdout.decode())
+            try:
+                output = subprocess.run(
+                    [bash_exe, "--norc", "-c", 'echo "${BASH_VERSION}"'],
+                    stdout=subprocess.PIPE,
+                    check=False,
+                )
+                match = re.search(r"^(\d+)\.(\d+)\.\d+", output.stdout.decode())
+            except (OSError, UnicodeDecodeError):
+                match = None
 
         if match is not None:
             major, minor = match.groups()
