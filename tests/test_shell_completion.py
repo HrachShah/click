@@ -358,6 +358,18 @@ def test_bash_version_check_handles_unusable_executable(monkeypatch, capsys):
     assert "couldn't detect bash version" in capsys.readouterr().err.lower()
 
 
+def test_bash_version_check_handles_large_version_numbers(monkeypatch, capsys):
+    class Result:
+        stdout = b"10.12.3\n"
+
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/bin/bash")
+    monkeypatch.setattr("subprocess.run", lambda *args, **kwargs: Result())
+
+    click.shell_completion.BashComplete._check_version()
+
+    assert capsys.readouterr().err == ""
+
+
 
 @pytest.mark.parametrize("shell", ["bash", "zsh", "fish"])
 @pytest.mark.usefixtures("_patch_for_completion")
