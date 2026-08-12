@@ -53,6 +53,14 @@ def test_range_fail(type, value, expect):
     assert expect in exc_info.value.message
 
 
+def test_range_rejects_reversed_bounds():
+    with pytest.raises(TypeError, match="Minimum is greater than maximum"):
+        click.IntRange(5, 0)
+
+    with pytest.raises(TypeError, match="Minimum is greater than maximum"):
+        click.FloatRange(1.5, 0.5)
+
+
 @pytest.mark.parametrize("value", ["nan", "NaN"])
 def test_float_range_rejects_nan(value):
     with pytest.raises(click.BadParameter, match="is not a valid float range"):

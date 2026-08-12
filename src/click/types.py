@@ -589,6 +589,9 @@ class _NumberRangeBase(
         max_open: bool = False,
         clamp: bool = False,
     ) -> None:
+        if min is not None and max is not None and min > max:
+            raise ValueError("min must be less than or equal to max")
+
         self.min = min
         self.max = max
         self.min_open = min_open
